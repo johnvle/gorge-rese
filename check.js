@@ -3,6 +3,61 @@ require('dotenv').config();
 
 const CalendarScraper = require('./index.js');
 const Notifier = require('./notifier.js');
+const fs = require('fs');
+const path = require('path');
+
+const LAST_NOTIFICATION_FILE = path.join(__dirname, 'last_notification.json');
+const NON_AVAILABLE_COOLDOWN_MINUTES = 30;
+
+/**
+ * Check if we should send a non-available notification based on cooldown
+ * Only applies to LOCAL runs, not GitHub Actions
+ */
+function shouldSendNonAvailableNotification() {
+  try {
+    if (!fs.existsSync(LAST_NOTIFICATION_FILE)) {
+      return true; // No previous notification, send it
+    }
+
+    const lastNotification = JSON.parse(fs.readFileSync(LAST_NOTIFICATION_FILE, 'utf8'));
+
+    // If last notification had availability, always send the non-available one
+    if (lastNotification.hadAvailability) {
+      return true;
+    }
+
+    // Check if enough time has passed since last non-available notification
+    const lastTime = new Date(lastNotification.timestamp);
+    const now = new Date();
+    const minutesSince = (now - lastTime) / (1000 * 60);
+
+    if (minutesSince >= NON_AVAILABLE_COOLDOWN_MINUTES) {
+      return true;
+    }
+
+    console.log(`   ⏳ Skipping notification (last non-available alert was ${Math.floor(minutesSince)} minutes ago)`);
+    return false;
+
+  } catch (error) {
+    console.error('Error reading last notification file:', error.message);
+    return true; // On error, send the notification
+  }
+}
+
+/**
+ * Update the last notification tracking file
+ */
+function updateLastNotification(hadAvailability) {
+  try {
+    const data = {
+      timestamp: new Date().toISOString(),
+      hadAvailability
+    };
+    fs.writeFileSync(LAST_NOTIFICATION_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error writing last notification file:', error.message);
+  }
+}
 
 /**
  * Main orchestration script for checking reservations
@@ -58,7 +113,7 @@ async function checkReservations() {
     if (availableSlots.length > 0) {
       console.log(`\n🔔 Found ${availableSlots.length} available slot(s) - sending notification!`);
 
-      // Send notification with all available slots
+      // Send notification with all available slots (always, no cooldown)
       await notifier.notify(
         '🎉 Reservation Slots Available!',
         `Found ${availableSlots.length} available slot(s) for ${datesToCheck.join(', ')}`,
@@ -67,18 +122,32 @@ async function checkReservations() {
       );
 
       console.log('   ✓ Notification sent');
+
+      // Track notification for local cooldown
+      if (source === 'Local') {
+        updateLastNotification(true);
+      }
     } else {
-      console.log('\n❌ No available slots found - sending notification');
+      console.log('\n❌ No available slots found');
 
-      // Send notification that check ran but found nothing
-      await notifier.notify(
-        '✅ Check Complete - No Availability',
-        `Checked ${datesToCheck.join(', ')} - no available slots found at this time.`,
-        [],
-        source
-      );
+      // Apply cooldown logic ONLY for local runs
+      const shouldNotify = source === 'GitHub Actions' || shouldSendNonAvailableNotification();
 
-      console.log('   ✓ Notification sent');
+      if (shouldNotify) {
+        await notifier.notify(
+          '✅ Check Complete - No Availability',
+          `Checked ${datesToCheck.join(', ')} - no available slots found at this time.`,
+          [],
+          source
+        );
+
+        console.log('   ✓ Notification sent');
+
+        // Track notification for local cooldown
+        if (source === 'Local') {
+          updateLastNotification(false);
+        }
+      }
     }
 
     // Summary
