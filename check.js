@@ -1,3 +1,6 @@
+// Load environment variables from .env file (for local development)
+require('dotenv').config();
+
 const CalendarScraper = require('./index.js');
 const Notifier = require('./notifier.js');
 
