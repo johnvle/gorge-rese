@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# State files
+last_check.json
+
+# Output files
+calendar_availabilities.json
+available_slots.json
+
+# Screenshots
+*.png
+debug_*.png
+error_*.png
+
+# Environment variables
+.env
+.env.local
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test coverage
+coverage/
+
+# Build outputs
+dist/
+build/

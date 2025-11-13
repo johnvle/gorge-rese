@@ -1,0 +1,22 @@
+{
+  "name": "gorge-rese",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "check": "node check.js",
+    "poll": "node check.js --poll",
+    "poll:1min": "node check.js --poll --interval 1",
+    "poll:5min": "node check.js --poll --interval 5",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "puppeteer": "^24.29.1"
+  },
+  "optionalDependencies": {
+    "nodemailer": "^6.9.8"
+  }
+}

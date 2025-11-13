@@ -1,0 +1,47 @@
+name: Check Reservations
+
+on:
+  schedule:
+    # GitHub Actions minimum is every 5 minutes (*/5)
+    # For 1-minute polling, you'd need a different service
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # Allow manual triggers
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run reservation checker
+        env:
+          # Add your notification service credentials as GitHub secrets
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          EMAIL_SERVICE: ${{ secrets.EMAIL_SERVICE }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          NOTIFICATION_METHOD: ${{ secrets.NOTIFICATION_METHOD }} # discord, slack, or email
+        run: node check.js
+
+      - name: Upload availability data
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: availability-data
+          path: |
+            calendar_availabilities.json
+            available_slots.json
+            last_check.json
+          retention-days: 7
