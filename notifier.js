@@ -13,21 +13,21 @@ class Notifier {
   /**
    * Send notification using configured method
    */
-  async notify(title, message, availableSlots = []) {
+  async notify(title, message, availableSlots = [], source = 'Unknown') {
     try {
       switch (this.method) {
         case 'discord':
-          return await this.sendDiscord(title, message, availableSlots);
+          return await this.sendDiscord(title, message, availableSlots, source);
         case 'console':
-          return this.sendConsole(title, message, availableSlots);
+          return this.sendConsole(title, message, availableSlots, source);
         default:
           console.warn(`Unknown notification method: ${this.method}, falling back to console`);
-          return this.sendConsole(title, message, availableSlots);
+          return this.sendConsole(title, message, availableSlots, source);
       }
     } catch (error) {
       console.error('Failed to send notification:', error.message);
       // Fallback to console
-      this.sendConsole(title, message, availableSlots);
+      this.sendConsole(title, message, availableSlots, source);
     }
   }
 
@@ -45,7 +45,7 @@ class Notifier {
   /**
    * Send Discord webhook notification
    */
-  async sendDiscord(title, message, availableSlots) {
+  async sendDiscord(title, message, availableSlots, source) {
     if (!this.discordWebhook) {
       throw new Error('Discord webhook URL not configured');
     }
@@ -55,7 +55,10 @@ class Notifier {
       description: message,
       color: availableSlots.length > 0 ? 0x00ff00 : 0xff9900,
       fields: [],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: `Source: ${source}`
+      }
     };
 
     if (availableSlots.length > 0) {
@@ -96,10 +99,11 @@ class Notifier {
   /**
    * Console output (for local testing)
    */
-  sendConsole(title, message, availableSlots) {
+  sendConsole(title, message, availableSlots, source) {
     console.log('\n=== NOTIFICATION ===');
     console.log(`Title: ${title}`);
     console.log(`Message: ${message}`);
+    console.log(`Source: ${source}`);
     if (availableSlots.length > 0) {
       console.log('\nAvailable Slots:');
       console.log(this.formatSlots(availableSlots));

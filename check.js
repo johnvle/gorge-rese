@@ -16,6 +16,9 @@ async function checkReservations() {
   // Initialize notifier
   const notifier = new Notifier();
 
+  // Detect source (GitHub Actions or Local)
+  const source = process.env.GITHUB_ACTIONS === 'true' ? 'GitHub Actions' : 'Local';
+
   // Configuration
   const targetURL = process.env.TARGET_URL || 'https://eipro.jp/takachiho1/eventCalendars/index';
 
@@ -59,7 +62,8 @@ async function checkReservations() {
       await notifier.notify(
         '🎉 Reservation Slots Available!',
         `Found ${availableSlots.length} available slot(s) for ${datesToCheck.join(', ')}`,
-        availableSlots
+        availableSlots,
+        source
       );
 
       console.log('   ✓ Notification sent');
@@ -70,7 +74,8 @@ async function checkReservations() {
       await notifier.notify(
         '✅ Check Complete - No Availability',
         `Checked ${datesToCheck.join(', ')} - no available slots found at this time.`,
-        []
+        [],
+        source
       );
 
       console.log('   ✓ Notification sent');
@@ -92,10 +97,12 @@ async function checkReservations() {
 
     // Send error notification (optional)
     try {
+      const source = process.env.GITHUB_ACTIONS === 'true' ? 'GitHub Actions' : 'Local';
       await notifier.notify(
         '⚠️ Reservation Check Failed',
         `Error: ${error.message}`,
-        []
+        [],
+        source
       );
     } catch (notifyError) {
       console.error('Failed to send error notification:', notifyError.message);
