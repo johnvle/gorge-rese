@@ -18,8 +18,8 @@ async function checkReservations() {
 
   // Dates to check - HARDCODED specific dates
   const datesToCheck = [
-    '2025/11/27',
-    '2025/11/28'
+    '2025/11/20',
+    '2025/11/21'
   ];
 
   console.log(`\nTarget URL: ${targetURL}`);
