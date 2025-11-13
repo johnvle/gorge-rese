@@ -1,38 +1,32 @@
 const CalendarScraper = require('./index.js');
-const StateManager = require('./stateManager.js');
 const Notifier = require('./notifier.js');
 
 /**
  * Main orchestration script for checking reservations
- * Runs the scraper, compares with previous state, and sends notifications
+ * Runs the scraper and sends notifications for ANY available slots
  */
 async function checkReservations() {
   console.log('='.repeat(60));
   console.log('Starting reservation check:', new Date().toISOString());
   console.log('='.repeat(60));
 
-  // Initialize components
-  const stateManager = new StateManager();
+  // Initialize notifier
   const notifier = new Notifier();
 
   // Configuration
   const targetURL = process.env.TARGET_URL || 'https://eipro.jp/takachiho1/eventCalendars/index';
 
-  // Dates to check (customize based on your needs)
-  const datesToCheck = generateDatesToCheck(14); // Check next 14 days
+  // Dates to check - HARDCODED specific dates
+  const datesToCheck = [
+    '2025/11/27',
+    '2025/11/28'
+  ];
 
   console.log(`\nTarget URL: ${targetURL}`);
   console.log(`Checking ${datesToCheck.length} dates: ${datesToCheck[0]} to ${datesToCheck[datesToCheck.length - 1]}`);
 
-  // Display previous state
-  if (!stateManager.isFirstRun()) {
-    const summary = stateManager.getSummary();
-    console.log(`\nLast check: ${summary.lastCheck}`);
-    console.log(`Previous available slots: ${summary.previousSlotsCount}`);
-    console.log(`Total notified slots: ${summary.notifiedSlotsCount}`);
-  } else {
-    console.log('\nFirst run - will establish baseline');
-  }
+  // Display timestamp
+  console.log(`\nCheck timestamp: ${new Date().toISOString()}`);
 
   try {
     // Run the scraper
@@ -54,43 +48,20 @@ async function checkReservations() {
     // Save results
     scraper.saveToJSON('calendar_availabilities.json');
 
-    // Check for new availabilities
-    if (stateManager.isFirstRun()) {
-      console.log('\n📊 First run - establishing baseline');
-      console.log('   No notifications will be sent');
-      stateManager.updateState(availableSlots);
+    // Send notification if ANY slots are available
+    if (availableSlots.length > 0) {
+      console.log(`\n🔔 Found ${availableSlots.length} available slot(s) - sending notification!`);
+
+      // Send notification with all available slots
+      await notifier.notify(
+        '🎉 Reservation Slots Available!',
+        `Found ${availableSlots.length} available slot(s) for ${datesToCheck.join(', ')}`,
+        availableSlots
+      );
+
+      console.log('   ✓ Notification sent');
     } else {
-      console.log('\n🔍 Comparing with previous check...');
-      const newSlots = stateManager.findNewAvailabilities(availableSlots);
-
-      if (newSlots.length > 0) {
-        console.log(`   Found ${newSlots.length} new slots!`);
-
-        // Filter out already notified slots
-        const unnotifiedSlots = stateManager.filterNotifiedSlots(newSlots);
-
-        if (unnotifiedSlots.length > 0) {
-          console.log(`   ${unnotifiedSlots.length} new slots (not yet notified)`);
-
-          // Send notification
-          await notifier.notify(
-            '🎉 New Reservation Slots Available!',
-            `Found ${unnotifiedSlots.length} new available slot(s)`,
-            unnotifiedSlots
-          );
-
-          // Mark as notified
-          stateManager.markAsNotified(unnotifiedSlots);
-          console.log('   ✓ Notification sent');
-        } else {
-          console.log('   All new slots already notified');
-        }
-      } else {
-        console.log('   No new availabilities');
-      }
-
-      // Update state
-      stateManager.updateState(availableSlots);
+      console.log('\n❌ No available slots found');
     }
 
     // Summary
