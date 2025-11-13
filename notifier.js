@@ -2,20 +2,12 @@ const https = require('https');
 const http = require('http');
 
 /**
- * Multi-platform notification service
- * Supports Discord, Slack, and Email notifications
+ * Discord notification service for reservation alerts
  */
 class Notifier {
   constructor(options = {}) {
     this.method = options.method || process.env.NOTIFICATION_METHOD || 'discord';
     this.discordWebhook = options.discordWebhook || process.env.DISCORD_WEBHOOK_URL;
-    this.slackWebhook = options.slackWebhook || process.env.SLACK_WEBHOOK_URL;
-    this.emailConfig = options.emailConfig || {
-      service: process.env.EMAIL_SERVICE,
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-      to: process.env.EMAIL_TO
-    };
   }
 
   /**
@@ -26,10 +18,6 @@ class Notifier {
       switch (this.method) {
         case 'discord':
           return await this.sendDiscord(title, message, availableSlots);
-        case 'slack':
-          return await this.sendSlack(title, message, availableSlots);
-        case 'email':
-          return await this.sendEmail(title, message, availableSlots);
         case 'console':
           return this.sendConsole(title, message, availableSlots);
         default:
@@ -106,99 +94,7 @@ class Notifier {
   }
 
   /**
-   * Send Slack webhook notification
-   */
-  async sendSlack(title, message, availableSlots) {
-    if (!this.slackWebhook) {
-      throw new Error('Slack webhook URL not configured');
-    }
-
-    const blocks = [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: title
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: message
-        }
-      }
-    ];
-
-    if (availableSlots.length > 0) {
-      blocks.push({
-        type: 'divider'
-      });
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '*Available Slots:*\n```\n' + this.formatSlots(availableSlots) + '\n```'
-        }
-      });
-    }
-
-    const payload = { blocks };
-
-    return this.sendWebhook(this.slackWebhook, payload);
-  }
-
-  /**
-   * Send email notification (requires nodemailer)
-   */
-  async sendEmail(title, message, availableSlots) {
-    try {
-      const nodemailer = require('nodemailer');
-
-      if (!this.emailConfig.user || !this.emailConfig.pass) {
-        throw new Error('Email credentials not configured');
-      }
-
-      const transporter = nodemailer.createTransport({
-        service: this.emailConfig.service || 'gmail',
-        auth: {
-          user: this.emailConfig.user,
-          pass: this.emailConfig.pass
-        }
-      });
-
-      let htmlContent = `
-        <h2>${title}</h2>
-        <p>${message}</p>
-      `;
-
-      if (availableSlots.length > 0) {
-        htmlContent += '<h3>Available Slots:</h3><ul>';
-        availableSlots.forEach(slot => {
-          htmlContent += `<li>${slot.date} ${slot.startTime}-${slot.endTime}</li>`;
-        });
-        htmlContent += '</ul>';
-      }
-
-      await transporter.sendMail({
-        from: this.emailConfig.user,
-        to: this.emailConfig.to,
-        subject: title,
-        html: htmlContent
-      });
-
-      console.log('Email notification sent successfully');
-      return true;
-    } catch (error) {
-      if (error.code === 'MODULE_NOT_FOUND') {
-        console.error('nodemailer not installed. Run: npm install nodemailer');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Console output (for testing)
+   * Console output (for local testing)
    */
   sendConsole(title, message, availableSlots) {
     console.log('\n=== NOTIFICATION ===');
@@ -219,9 +115,6 @@ class Notifier {
     return new Promise((resolve, reject) => {
       const url = new URL(webhookUrl);
       const data = JSON.stringify(payload);
-
-      // Debug logging
-      console.log('Sending webhook payload:', JSON.stringify(payload, null, 2));
 
       const options = {
         hostname: url.hostname,
