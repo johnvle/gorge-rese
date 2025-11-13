@@ -220,13 +220,16 @@ class Notifier {
       const url = new URL(webhookUrl);
       const data = JSON.stringify(payload);
 
+      // Debug logging
+      console.log('Sending webhook payload:', JSON.stringify(payload, null, 2));
+
       const options = {
         hostname: url.hostname,
         path: url.pathname + url.search,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Content-Length': data.length
+          'Content-Length': Buffer.byteLength(data)
         }
       };
 
