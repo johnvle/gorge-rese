@@ -61,7 +61,16 @@ async function checkReservations() {
 
       console.log('   ✓ Notification sent');
     } else {
-      console.log('\n❌ No available slots found');
+      console.log('\n❌ No available slots found - sending notification');
+
+      // Send notification that check ran but found nothing
+      await notifier.notify(
+        '✅ Check Complete - No Availability',
+        `Checked ${datesToCheck.join(', ')} - no available slots found at this time.`,
+        []
+      );
+
+      console.log('   ✓ Notification sent');
     }
 
     // Summary
