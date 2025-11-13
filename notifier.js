@@ -94,6 +94,11 @@ class Notifier {
       embeds: [embed]
     };
 
+    // Add @here mention when slots are available
+    if (availableSlots.length > 0) {
+      payload.content = '@here';
+    }
+
     return this.sendWebhook(this.discordWebhook, payload);
   }
 
