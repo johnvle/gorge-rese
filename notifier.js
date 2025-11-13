@@ -97,6 +97,9 @@ class Notifier {
     // Add @here mention when slots are available
     if (availableSlots.length > 0) {
       payload.content = '@here';
+      payload.allowed_mentions = {
+        parse: ['everyone']
+      };
     }
 
     return this.sendWebhook(this.discordWebhook, payload);
