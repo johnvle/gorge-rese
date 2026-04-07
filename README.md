@@ -313,6 +313,45 @@ Estimated GitHub Actions usage:
 - ~8,640 minutes per month
 - Exceeds free tier for private repos (consider running locally or using 15-min interval)
 
+## AWS Lambda Deployment
+
+For 24/7 monitoring without managing a server, the scraper can run on AWS Lambda triggered by EventBridge. Infrastructure is managed in a companion Terraform repo: [gorge-rese-infra](https://github.com/johnvle/gorge-rese-infra).
+
+### Architecture
+
+```
+EventBridge (rate: 5 min)
+        │
+        ▼
+  Lambda (Node.js)          ──▶  Discord Webhook
+  [gorge-rese-scraper]      ──▶  Gmail SMTP
+        │
+        ▼
+  CloudWatch Logs (14d retention)
+        │
+  CloudWatch Alarms
+  (error rate + throttles)
+        │
+        ▼
+     SNS ──▶ Email
+```
+
+### CI/CD
+
+On push to `main`, the GitHub Actions workflow builds the Lambda artifact (`dist/scraper.zip`) and uploads it to S3. The Terraform config in [gorge-rese-infra](https://github.com/johnvle/gorge-rese-infra) pulls from that S3 path to deploy the function. This repo owns application code only — infrastructure is managed separately.
+
+### Infrastructure Alerts
+
+Two CloudWatch alarms monitor for silent failures:
+- **Error alarm** — triggers if the function crashes
+- **Throttle alarm** — triggers if AWS refuses to run it
+
+Both route to SNS → email, so you get notified if the monitor stops working.
+
+### Cost
+
+Lambda at this scale (~5s per invocation, every 5 minutes) costs effectively nothing — well within the AWS free tier. Compare to GitHub Actions at ~8,640 minutes/month which exceeds the free tier for private repos.
+
 ## License
 
 ISC
